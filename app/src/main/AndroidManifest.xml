@@ -12,6 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FileArchiver"
         tools:targetApi="31">
+        <activity android:name=".FileListActivity"></activity>
         <activity
             android:name=".MainActivity"
             android:exported="true">
