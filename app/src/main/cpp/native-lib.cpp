@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <string>
+#include "zlib.h"
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_example_filearchiver_MainActivity_stringFromJNI(
