@@ -34,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
                         Intent intent = new Intent(MainActivity.this, FileListActivity.class);
                         intent.putParcelableArrayListExtra("selectedFiles", new ArrayList<>(selectedFiles));
                         startActivity(intent);
+
+
                     }
                 }
             });
@@ -58,5 +60,4 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public native String stringFromJNI();
 }

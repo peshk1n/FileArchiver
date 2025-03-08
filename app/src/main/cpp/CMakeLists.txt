@@ -1,7 +1,5 @@
-# Минимальная версия CMake
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.10)
 
-# Имя проекта
 project("filearchiver")
 
 # Путь к исходникам zlib
@@ -25,14 +23,28 @@ add_library(zlib STATIC
 # Указываем путь к заголовочным файлам zlib
 target_include_directories(zlib PUBLIC ${ZLIB_SRC_DIR})
 
+# Путь к исходникам minizip
+set(MINIZIP_SRC_DIR ${CMAKE_SOURCE_DIR}/minizip)
+
+# Сборка minizip как статической библиотеки
+add_library(minizip STATIC
+        ${MINIZIP_SRC_DIR}/zip.c
+        ${MINIZIP_SRC_DIR}/unzip.c
+        ${MINIZIP_SRC_DIR}/ioapi.c
+)
+
+# Указываем путь к заголовочным файлам minizip
+target_include_directories(minizip PUBLIC ${MINIZIP_SRC_DIR})
+
 # Основная библиотека проекта
-add_library(${CMAKE_PROJECT_NAME} SHARED
+add_library(filearchiver SHARED
         native-lib.cpp
 )
 
 # Связываем библиотеки
-target_link_libraries(${CMAKE_PROJECT_NAME}
+target_link_libraries(filearchiver
         android
         log
-        zlib  # Добавляем zlib
+        zlib
+        minizip
 )
