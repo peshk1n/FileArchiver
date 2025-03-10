@@ -1,15 +1,16 @@
 package com.example.filearchiver;
 
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class FileListActivity extends AppCompatActivity {
 
@@ -17,21 +18,22 @@ public class FileListActivity extends AppCompatActivity {
         System.loadLibrary("filearchiver"); // Загружаем нативную библиотеку
     }
     private ArrayList<Uri> fileUris;
+    private FileAdapter fileAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_file_list);
 
-        ListView fileListView = findViewById(R.id.fileListView);
+        RecyclerView fileRecyclerView = findViewById(R.id.fileRecyclerView);
         Button btnArchive = findViewById(R.id.archiveButton);
 
         fileUris = getIntent().getParcelableArrayListExtra("selectedFiles");
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_list_item_1,
-                getFileNames());
-        fileListView.setAdapter(adapter);
+        // Настройка RecyclerView
+        fileRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        fileAdapter = new FileAdapter(getFileItems());
+        fileRecyclerView.setAdapter(fileAdapter);
 
         // Обработчик кнопки архивировации
         btnArchive.setOnClickListener(v -> {
@@ -49,16 +51,18 @@ public class FileListActivity extends AppCompatActivity {
     }
 
 
-    private ArrayList<String> getFileNames() {
-        ArrayList<String> names = new ArrayList<>();
+    // Метод для создания списка FileItem
+    private ArrayList<FileItem> getFileItems() {
+        ArrayList<FileItem> fileItems = new ArrayList<>();
         if (fileUris != null) {
             for (Uri uri : fileUris) {
-                names.add(uri.getLastPathSegment());
+                String fileName = FileUtils.getFileName(this, uri);
+                String fileSize = FileUtils.getFileSize(this, uri);
+                fileItems.add(new FileItem(fileName, fileSize, R.drawable.ic_image)); // Иконка для всех файлов
             }
         }
-        return names;
+        return fileItems;
     }
-
 
 
     // Нативный метод для архивации файла

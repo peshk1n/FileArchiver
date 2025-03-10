@@ -64,4 +64,48 @@ public class FileUtils {
             return null;
         }
     }
+
+
+    // Метод для получения размера файла
+    public static String getFileSize(Context context, Uri uri) {
+        long fileSizeInBytes = 0;
+
+        // Получаем размер файла через ContentResolver
+        if (uri.getScheme().equals("content")) {
+            try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                    if (sizeIndex != -1) {
+                        fileSizeInBytes = cursor.getLong(sizeIndex);
+                    }
+                }
+            }
+        } else {
+            // Если URI не является content URI, используем File
+            File file = new File(uri.getPath());
+            if (file.exists()) {
+                fileSizeInBytes = file.length();
+            }
+        }
+
+        // Преобразуем размер в удобочитаемый формат
+        return formatFileSize(fileSizeInBytes);
+    }
+
+    // Метод для форматирования размера файла
+    private static String formatFileSize(long sizeInBytes) {
+        if (sizeInBytes <= 0) {
+            return "0 B";
+        }
+
+        final String[] units = new String[]{"B", "KB", "MB", "GB", "TB"};
+        int digitGroups = (int) (Math.log10(sizeInBytes) / Math.log10(1024));
+
+        // Ограничиваем индекс массива, чтобы избежать выхода за пределы
+        digitGroups = Math.min(digitGroups, units.length - 1);
+
+        // Форматируем размер
+        double size = sizeInBytes / Math.pow(1024, digitGroups);
+        return String.format("%.1f %s", size, units[digitGroups]);
+    }
 }
