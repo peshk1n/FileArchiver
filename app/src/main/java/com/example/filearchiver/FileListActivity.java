@@ -2,6 +2,7 @@ package com.example.filearchiver;
 
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Toast;
@@ -20,10 +21,17 @@ public class FileListActivity extends AppCompatActivity {
     private ArrayList<Uri> fileUris;
     private FileAdapter fileAdapter;
 
+    private int totalFiles; // Общее количество файлов
+    private int filesArchived = 0; // Количество заархивированных файлов
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_file_list);
+
+        // Получаем общее количество файлов
+        fileUris = getIntent().getParcelableArrayListExtra("selectedFiles");
+        totalFiles = fileUris != null ? fileUris.size() : 0;
 
         RecyclerView fileRecyclerView = findViewById(R.id.fileRecyclerView);
         Button btnArchive = findViewById(R.id.archiveButton);
@@ -46,10 +54,17 @@ public class FileListActivity extends AppCompatActivity {
                 // Обработка случая, когда список пустой
                 Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
             }
-
+            filesArchived = 0;
         });
     }
 
+
+    // Метод для обновления прогресса
+    public void updateFileProgress() {
+        filesArchived++;
+        int progress = (int) ((filesArchived * 100.0) / totalFiles); // Прогресс в процентах
+        Log.d("FileArchiver", "Обработано файлов: " + filesArchived + " из " + totalFiles);
+    }
 
     // Метод для создания списка FileItem
     private ArrayList<FileItem> getFileItems() {
@@ -71,7 +86,7 @@ public class FileListActivity extends AppCompatActivity {
             String outputFilePath
     );
 
-    //Метод для вызова архивации
+    // Метод для вызова архивации
     private void compressSelectedFile(Uri fileUri) {
         // Получаем путь к выбранному файлу
         String inputFilePath = FileUtils.getPath(this, fileUri);
@@ -85,7 +100,6 @@ public class FileListActivity extends AppCompatActivity {
         if (fileName == null) {
             fileName = "archive";
         } else {
-            // Убираем расширение файла
             int lastDotIndex = fileName.lastIndexOf('.');
             if (lastDotIndex != -1) {
                 fileName = fileName.substring(0, lastDotIndex);

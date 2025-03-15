@@ -10,10 +10,21 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
+// Функция для обновления прогресса в Java
+void updateFileProgress(JNIEnv* env, jobject thiz) {
+    jclass clazz = env->GetObjectClass(thiz);
+    jmethodID methodId = env->GetMethodID(clazz, "updateFileProgress", "()V");
+    if (methodId == nullptr) {
+        LOGE("Метод updateFileProgress не найден в Java-классе");
+        return;
+    }
+    env->CallVoidMethod(thiz, methodId);
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_example_filearchiver_FileListActivity_compressFile(
         JNIEnv* env,
-        jobject /* this */,
+        jobject thiz,
         jstring inputFilePath,
         jstring outputFilePath) {
     const char* inputPath = env->GetStringUTFChars(inputFilePath, nullptr);
@@ -93,6 +104,9 @@ Java_com_example_filearchiver_FileListActivity_compressFile(
     // Освобождаем ресурсы
     env->ReleaseStringUTFChars(inputFilePath, inputPath);
     env->ReleaseStringUTFChars(outputFilePath, outputPath);
+
+    // Уведомляем Java о завершении архивации файла
+    updateFileProgress(env, thiz);
 
     return true;
 }
