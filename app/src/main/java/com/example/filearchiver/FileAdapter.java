@@ -49,4 +49,8 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
             fileIcon = itemView.findViewById(R.id.fileIcon);
         }
     }
+
+    public void setFileItems(List<FileItem> fileItems) {
+        this.files = fileItems;
+    }
 }
