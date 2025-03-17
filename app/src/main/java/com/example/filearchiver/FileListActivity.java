@@ -16,8 +16,15 @@ import androidx.activity.result.ActivityResultLauncher;
 
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
+import androidx.documentfile.provider.DocumentFile;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -55,6 +62,20 @@ public class FileListActivity extends AppCompatActivity {
                 }
             });
 
+    private final ActivityResultLauncher<Intent> folderPickerLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri treeUri = result.getData().getData();
+                    if (treeUri != null) {
+                        getContentResolver().takePersistableUriPermission(
+                                treeUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        );
+                        startArchiving(treeUri);
+                    }
+                }
+            });
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,22 +97,16 @@ public class FileListActivity extends AppCompatActivity {
 
         // Обработчик кнопки архивировации
         btnArchive.setOnClickListener(v -> {
+            // Здесь выбираем папку для сохранения и запускаем архивацию файлов
+            openFolderPicker();
+
+            // Здесь обновляем инфу в UI
             btnArchive.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
             progressBar.setProgress(0);
             progressText.setVisibility(View.VISIBLE);
             progressText.setText("File " +  "0/" + totalFiles);
             filesArchived = 0;
-
-            // Логика архивации
-            if (fileUris != null && !fileUris.isEmpty()) {
-                for (Uri fileUri : fileUris) {
-                    compressSelectedFile(fileUri);
-                }
-            } else {
-                // Обработка случая, когда список пустой
-                Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
-            }
         });
     }
 
@@ -100,6 +115,17 @@ public class FileListActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_file_list, menu);
         return true;
+    }
+
+
+    private void startArchiving(Uri folderUri) {
+        if (fileUris != null && !fileUris.isEmpty()) {
+            for (Uri fileUri : fileUris) {
+                compressSelectedFile(fileUri, folderUri);
+            }
+        } else {
+            Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
+        }
     }
 
 
@@ -138,16 +164,13 @@ public class FileListActivity extends AppCompatActivity {
     );
 
 
-    // Метод для вызова архивации
-    private void compressSelectedFile(Uri fileUri) {
-        // Получаем путь к выбранному файлу
+    private void compressSelectedFile(Uri fileUri, Uri folderUri) {
         String inputFilePath = FileUtils.getPath(this, fileUri);
         if (inputFilePath == null) {
             Toast.makeText(this, "Не удалось получить путь к файлу", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Получаем имя файла
         String fileName = FileUtils.getFileName(this, fileUri);
         if (fileName == null) {
             fileName = "archive";
@@ -158,16 +181,59 @@ public class FileListActivity extends AppCompatActivity {
             }
         }
 
-        // Путь для сохранения архива
-        String outputFilePath = getFilesDir() + "/" + fileName + ".zip";
+        // Временный путь для сохранения архива в кэше
+        String tempOutputFilePath = new File(getCacheDir(), fileName + ".zip").getAbsolutePath();
 
         // Вызываем нативный метод для архивации
-        boolean success = compressFile(inputFilePath, outputFilePath);
+        boolean success = compressFile(inputFilePath, tempOutputFilePath);
 
         if (success) {
-            Toast.makeText(this, "Файл успешно заархивирован: " + outputFilePath, Toast.LENGTH_SHORT).show();
+            moveArchiveToSelectedFolder(tempOutputFilePath, folderUri, fileName + ".zip");
         } else {
             Toast.makeText(this, "Ошибка при архивации файла", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    // Метод для перемещения архива в выбранную папку
+    private void moveArchiveToSelectedFolder(String tempFilePath, Uri folderUri, String archiveName) {
+        File tempFile = new File(tempFilePath);
+        if (!tempFile.exists()) {
+            Toast.makeText(this, "Временный файл архива не найден", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        DocumentFile folder = DocumentFile.fromTreeUri(this, folderUri);
+        if (folder != null && folder.isDirectory()) {
+            DocumentFile archiveFile = folder.createFile("application/zip", archiveName);
+            if (archiveFile != null) {
+                try (InputStream inputStream = new FileInputStream(tempFile);
+                     OutputStream outputStream = getContentResolver().openOutputStream(archiveFile.getUri())) {
+
+                    if (outputStream != null) {
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = inputStream.read(buffer)) > 0) {
+                            outputStream.write(buffer, 0, length);
+                        }
+
+                        Toast.makeText(this, "Файл успешно заархивирован: " + archiveName, Toast.LENGTH_SHORT).show();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(this, "Ошибка при перемещении архива", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                Toast.makeText(this, "Не удалось создать файл архива", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Выбранная папка недоступна", Toast.LENGTH_SHORT).show();
+        }
+
+        if (tempFile.delete()) {
+            Log.i("FileArchiver", "Временный файл удален из кэша");
+        } else {
+            Log.e("FileArchiver", "Не удалось удалить временный файл из кэша");
         }
     }
 
@@ -183,6 +249,11 @@ public class FileListActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void openFolderPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        folderPickerLauncher.launch(intent);
     }
 
     private void openFilePicker() {
