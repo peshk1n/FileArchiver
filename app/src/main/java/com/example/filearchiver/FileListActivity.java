@@ -43,6 +43,8 @@ public class FileListActivity extends AppCompatActivity {
     private int totalFiles; // Общее количество файлов
     private int filesArchived = 0; // Количество заархивированных файлов
 
+    private boolean isArchiving = false; // Флаг режима загрузки
+
     private final ActivityResultLauncher<Intent> filePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
@@ -65,13 +67,23 @@ public class FileListActivity extends AppCompatActivity {
     private final ActivityResultLauncher<Intent> folderPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri treeUri = result.getData().getData();
-                    if (treeUri != null) {
+                    Uri folderUri = result.getData().getData();
+                    if (folderUri != null) {
                         getContentResolver().takePersistableUriPermission(
-                                treeUri,
+                                folderUri,
                                 Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                         );
-                        startArchiving(treeUri);
+
+                        // Обновляем UI
+                        setArchiving(true);
+                        // Архивируем файлы
+                        if (fileUris != null && !fileUris.isEmpty()) {
+                            for (Uri fileUri : fileUris) {
+                                compressSelectedFile(fileUri, folderUri);
+                            }
+                        } else {
+                            Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             });
@@ -97,16 +109,8 @@ public class FileListActivity extends AppCompatActivity {
 
         // Обработчик кнопки архивировации
         btnArchive.setOnClickListener(v -> {
-            // Здесь выбираем папку для сохранения и запускаем архивацию файлов
+            // Выбираем папку для сохранения и запускаем архивацию файлов
             openFolderPicker();
-
-            // Здесь обновляем инфу в UI
-            btnArchive.setVisibility(View.GONE);
-            progressBar.setVisibility(View.VISIBLE);
-            progressBar.setProgress(0);
-            progressText.setVisibility(View.VISIBLE);
-            progressText.setText("File " +  "0/" + totalFiles);
-            filesArchived = 0;
         });
     }
 
@@ -114,18 +118,29 @@ public class FileListActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_file_list, menu);
+        MenuItem addFileItem = menu.findItem(R.id.action_add_file);
+        addFileItem.setVisible(!isArchiving);
         return true;
     }
 
 
-    private void startArchiving(Uri folderUri) {
-        if (fileUris != null && !fileUris.isEmpty()) {
-            for (Uri fileUri : fileUris) {
-                compressSelectedFile(fileUri, folderUri);
-            }
-        } else {
-            Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
+    // Метод для включения/выключения режима загрузки
+    private void setArchiving(boolean archiving) {
+        isArchiving = archiving;
+        if(archiving){
+            btnArchive.setVisibility(View.GONE);
+            progressBar.setVisibility(View.VISIBLE);
+            progressBar.setProgress(0);
+            progressText.setVisibility(View.VISIBLE);
+            progressText.setText("File " +  "0/" + totalFiles);
+            filesArchived = 0;
         }
+        else {
+            progressBar.setVisibility(View.GONE);
+            progressText.setVisibility(View.GONE);
+            btnArchive.setVisibility(View.VISIBLE);
+        }
+        invalidateOptionsMenu();
     }
 
 
@@ -136,9 +151,7 @@ public class FileListActivity extends AppCompatActivity {
         progressBar.setProgress(progress);
         progressText.setText("File " +  filesArchived + "/" + totalFiles);
         if (filesArchived == totalFiles) {
-            progressBar.setVisibility(View.GONE);
-            progressText.setVisibility(View.GONE);
-            btnArchive.setVisibility(View.VISIBLE);
+            setArchiving(false);
         }
     }
 
@@ -268,8 +281,11 @@ public class FileListActivity extends AppCompatActivity {
         if (fileUris == null) {
             fileUris = new ArrayList<>();
         }
-        fileUris.add(fileUri);
-        fileAdapter.setFileItems(getFileItems());
-        fileAdapter.notifyDataSetChanged();
+
+        if (!fileUris.contains(fileUri)){
+            fileUris.add(fileUri);
+            fileAdapter.setFileItems(getFileItems());
+            fileAdapter.notifyDataSetChanged();
+        }
     }
 }
