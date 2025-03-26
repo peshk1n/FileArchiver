@@ -9,12 +9,14 @@
     tools:context=".MainActivity">
 
     <TextView
+        android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:textSize="22sp"
+        android:text="No files to archive :("
+        android:textAlignment="center"
         android:textColor="#F96D8A"
-        android:text="Select files"
+        android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageView" />
@@ -23,21 +25,28 @@
         android:id="@+id/imageView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_folder"
+        android:src="@drawable/ic_main_folder"
         app:layout_constraintBottom_toTopOf="@+id/selectFilesButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <android.widget.Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/selectFilesButton"
         android:layout_width="match_parent"
         android:layout_height="58dp"
-        android:layout_marginBottom="8dp"
-        android:backgroundTint="@color/pink_button"
         android:background="@drawable/shape_button_footer"
-        android:text="Start"
+        app:backgroundTint="@color/pink_button"
+        android:text="Add files"
+        android:textAllCaps="false"
         android:textColor="@color/white"
+        android:textSize="16sp"
+        app:icon="@drawable/ic_add"
+        app:iconSize="18dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:iconGravity="textStart"
+        app:iconTint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

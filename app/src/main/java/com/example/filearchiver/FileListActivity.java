@@ -4,6 +4,8 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -44,6 +46,7 @@ public class FileListActivity extends AppCompatActivity {
     private int filesArchived = 0; // Количество заархивированных файлов
 
     private boolean isArchiving = false; // Флаг режима загрузки
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     private final ActivityResultLauncher<Intent> filePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -146,13 +149,15 @@ public class FileListActivity extends AppCompatActivity {
 
     // Метод для обновления прогресса
     public void updateFileProgress() {
-        filesArchived++;
-        int progress = (int) ((filesArchived * 100.0) / totalFiles); // Прогресс в процентах
-        progressBar.setProgress(progress);
-        progressText.setText("File " +  filesArchived + "/" + totalFiles);
-        if (filesArchived == totalFiles) {
-            setArchiving(false);
-        }
+        uiHandler.post(() -> {
+            filesArchived++;
+            int progress = (int) ((filesArchived * 100.0) / totalFiles);
+            progressBar.setProgress(progress);
+            progressText.setText("File " + filesArchived + "/" + totalFiles);
+            if (filesArchived == totalFiles) {
+                setArchiving(false);
+            }
+        });
     }
 
 
@@ -178,33 +183,33 @@ public class FileListActivity extends AppCompatActivity {
 
 
     private void compressSelectedFile(Uri fileUri, Uri folderUri) {
-        String inputFilePath = FileUtils.getPath(this, fileUri);
-        if (inputFilePath == null) {
-            Toast.makeText(this, "Не удалось получить путь к файлу", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String fileName = FileUtils.getFileName(this, fileUri);
-        if (fileName == null) {
-            fileName = "archive";
-        } else {
-            int lastDotIndex = fileName.lastIndexOf('.');
-            if (lastDotIndex != -1) {
-                fileName = fileName.substring(0, lastDotIndex);
+        new Thread(() -> {
+            String inputFilePath = FileUtils.getPath(FileListActivity.this, fileUri);
+            if (inputFilePath == null) {
+                uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Не удалось получить путь к файлу", Toast.LENGTH_SHORT).show());
+                return;
             }
-        }
 
-        // Временный путь для сохранения архива в кэше
-        String tempOutputFilePath = new File(getCacheDir(), fileName + ".zip").getAbsolutePath();
+            String fileName = FileUtils.getFileName(FileListActivity.this, fileUri);
+            if (fileName == null) {
+                fileName = "archive";
+            } else {
+                int lastDotIndex = fileName.lastIndexOf('.');
+                if (lastDotIndex != -1) {
+                    fileName = fileName.substring(0, lastDotIndex);
+                }
+            }
 
-        // Вызываем нативный метод для архивации
-        boolean success = compressFile(inputFilePath, tempOutputFilePath);
+            String tempOutputFilePath = new File(getCacheDir(), fileName + ".zip").getAbsolutePath();
+            boolean success = compressFile(inputFilePath, tempOutputFilePath);
 
-        if (success) {
-            moveArchiveToSelectedFolder(tempOutputFilePath, folderUri, fileName + ".zip");
-        } else {
-            Toast.makeText(this, "Ошибка при архивации файла", Toast.LENGTH_SHORT).show();
-        }
+            if (success) {
+                moveArchiveToSelectedFolder(tempOutputFilePath, folderUri, fileName + ".zip");
+            } else {
+                uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Ошибка при архивации файла", Toast.LENGTH_SHORT).show());
+            }
+            updateFileProgress();
+        }).start();
     }
 
 
@@ -212,7 +217,7 @@ public class FileListActivity extends AppCompatActivity {
     private void moveArchiveToSelectedFolder(String tempFilePath, Uri folderUri, String archiveName) {
         File tempFile = new File(tempFilePath);
         if (!tempFile.exists()) {
-            Toast.makeText(this, "Временный файл архива не найден", Toast.LENGTH_SHORT).show();
+            uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Временный файл архива не найден", Toast.LENGTH_SHORT).show());
             return;
         }
 
@@ -229,24 +234,17 @@ public class FileListActivity extends AppCompatActivity {
                         while ((length = inputStream.read(buffer)) > 0) {
                             outputStream.write(buffer, 0, length);
                         }
-
-                        Toast.makeText(this, "Файл успешно заархивирован: " + archiveName, Toast.LENGTH_SHORT).show();
+                        uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Файл успешно заархивирован: " + archiveName, Toast.LENGTH_SHORT).show());
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                    Toast.makeText(this, "Ошибка при перемещении архива", Toast.LENGTH_SHORT).show();
+                    uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Ошибка при перемещении архива", Toast.LENGTH_SHORT).show());
                 }
-            } else {
-                Toast.makeText(this, "Не удалось создать файл архива", Toast.LENGTH_SHORT).show();
             }
-        } else {
-            Toast.makeText(this, "Выбранная папка недоступна", Toast.LENGTH_SHORT).show();
         }
 
         if (tempFile.delete()) {
             Log.i("FileArchiver", "Временный файл удален из кэша");
-        } else {
-            Log.e("FileArchiver", "Не удалось удалить временный файл из кэша");
         }
     }
 
@@ -286,6 +284,7 @@ public class FileListActivity extends AppCompatActivity {
             fileUris.add(fileUri);
             fileAdapter.setFileItems(getFileItems());
             fileAdapter.notifyDataSetChanged();
+            totalFiles++;
         }
     }
 }
