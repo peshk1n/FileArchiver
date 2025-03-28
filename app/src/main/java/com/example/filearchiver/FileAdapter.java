@@ -1,5 +1,6 @@
 package com.example.filearchiver;
 
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,6 +36,21 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
     @Override
     public int getItemCount() {
         return files.size();
+    }
+
+    public int findItemPosition(Uri fileUri) {
+        for (int i = 0; i < files.size(); i++) {
+            if (files.get(i).getUri().equals(fileUri)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void removeItem(int position) {
+        files.remove(position);
+        notifyItemRemoved(position);
+        notifyItemRangeChanged(position, files.size() - position);
     }
 
     public static class FileViewHolder extends RecyclerView.ViewHolder {

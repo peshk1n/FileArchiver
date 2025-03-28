@@ -43,11 +43,6 @@ public class MainActivity extends AppCompatActivity {
                         selectedFiles.add(uri);
                     }
 
-                    for (Uri uri : selectedFiles) {
-                        Toast.makeText(this, "Выбран файл: " + uri.getLastPathSegment(), Toast.LENGTH_SHORT).show();
-                    }
-
-
                     // Переходим на экран со списком файлов
                     if (!selectedFiles.isEmpty()) {
                         Intent intent = new Intent(MainActivity.this, FileListActivity.class);

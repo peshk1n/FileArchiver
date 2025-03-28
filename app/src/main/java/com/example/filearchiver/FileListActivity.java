@@ -13,7 +13,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ProgressBar;
 import androidx.activity.result.ActivityResultLauncher;
 
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -27,8 +26,11 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 
 import androidx.documentfile.provider.DocumentFile;
+import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 
 public class FileListActivity extends AppCompatActivity {
@@ -38,7 +40,7 @@ public class FileListActivity extends AppCompatActivity {
     }
     private ArrayList<Uri> fileUris;
     private FileAdapter fileAdapter;
-    private ProgressBar progressBar;
+    private LinearProgressIndicator progressBar;
     private TextView progressText;
     private Button btnArchive;
 
@@ -80,12 +82,8 @@ public class FileListActivity extends AppCompatActivity {
                         // Обновляем UI
                         setArchiving(true);
                         // Архивируем файлы
-                        if (fileUris != null && !fileUris.isEmpty()) {
-                            for (Uri fileUri : fileUris) {
-                                compressSelectedFile(fileUri, folderUri);
-                            }
-                        } else {
-                            Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
+                        for (Uri fileUri : fileUris) {
+                            compressSelectedFile(fileUri, folderUri);
                         }
                     }
                 }
@@ -112,8 +110,11 @@ public class FileListActivity extends AppCompatActivity {
 
         // Обработчик кнопки архивировации
         btnArchive.setOnClickListener(v -> {
-            // Выбираем папку для сохранения и запускаем архивацию файлов
-            openFolderPicker();
+            if (fileUris != null && !fileUris.isEmpty()) {
+                openFolderPicker();
+            } else {
+                Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -131,17 +132,19 @@ public class FileListActivity extends AppCompatActivity {
     private void setArchiving(boolean archiving) {
         isArchiving = archiving;
         if(archiving){
+            filesArchived = 0;
+            totalFiles = fileUris != null ? fileUris.size() : 0;
+            progressBar.setProgress(0);
+            progressText.setText("File " +  "0/" + totalFiles);
             btnArchive.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
-            progressBar.setProgress(0);
             progressText.setVisibility(View.VISIBLE);
-            progressText.setText("File " +  "0/" + totalFiles);
-            filesArchived = 0;
         }
         else {
             progressBar.setVisibility(View.GONE);
             progressText.setVisibility(View.GONE);
             btnArchive.setVisibility(View.VISIBLE);
+            fileUris.clear();
         }
         invalidateOptionsMenu();
     }
@@ -152,10 +155,12 @@ public class FileListActivity extends AppCompatActivity {
         uiHandler.post(() -> {
             filesArchived++;
             int progress = (int) ((filesArchived * 100.0) / totalFiles);
-            progressBar.setProgress(progress);
+            progressBar.setProgressCompat(progress, true);
             progressText.setText("File " + filesArchived + "/" + totalFiles);
             if (filesArchived == totalFiles) {
-                setArchiving(false);
+                progressBar.postDelayed(() -> {
+                    setArchiving(false);
+                }, 1000);
             }
         });
     }
@@ -168,7 +173,7 @@ public class FileListActivity extends AppCompatActivity {
             for (Uri uri : fileUris) {
                 String fileName = FileUtils.getFileName(this, uri);
                 String fileSize = FileUtils.getFileSize(this, uri);
-                fileItems.add(new FileItem(fileName, fileSize, R.drawable.ic_file)); // Иконка для всех файлов
+                fileItems.add(new FileItem(uri, fileName, fileSize, R.drawable.ic_file));
             }
         }
         return fileItems;
@@ -203,12 +208,24 @@ public class FileListActivity extends AppCompatActivity {
             String tempOutputFilePath = new File(getCacheDir(), fileName + ".zip").getAbsolutePath();
             boolean success = compressFile(inputFilePath, tempOutputFilePath);
 
+            uiHandler.post(() -> {
+                int position = fileAdapter.findItemPosition(fileUri);
+                if (position != -1) {
+                    fileAdapter.removeItem(position);
+                }
+            });
+
             if (success) {
                 moveArchiveToSelectedFolder(tempOutputFilePath, folderUri, fileName + ".zip");
             } else {
                 uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Ошибка при архивации файла", Toast.LENGTH_SHORT).show());
             }
-            updateFileProgress();
+
+            File file = new File(inputFilePath);
+            if (file.exists()) {
+                file.delete();
+            }
+
         }).start();
     }
 
