@@ -1,5 +1,6 @@
 package com.example.filearchiver;
 
+import android.app.ActivityOptions;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
@@ -26,10 +27,9 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 
 import androidx.documentfile.provider.DocumentFile;
-import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 
@@ -107,6 +107,10 @@ public class FileListActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         progressText = findViewById(R.id.progressText);
         btnArchive = findViewById(R.id.archiveButton);
+
+        MaterialToolbar topAppBar = findViewById(R.id.topAppBar);
+        setSupportActionBar(topAppBar);
+        topAppBar.setNavigationOnClickListener(v -> onBackPressed());
 
         // Обработчик кнопки архивировации
         btnArchive.setOnClickListener(v -> {

@@ -16,7 +16,7 @@
             android:id="@+id/fileIcon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_gravity="center"
+            android:layout_gravity="top|left"
             android:src="@drawable/ic_file" />
 
         <!-- Название и размер файла -->
@@ -34,9 +34,7 @@
                 android:layout_height="wrap_content"
                 android:text="Название файла"
                 android:textColor="@color/lilac"
-                android:textSize="16sp"
-                android:maxLines="1"
-                android:ellipsize="end" />
+                android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/fileSize"

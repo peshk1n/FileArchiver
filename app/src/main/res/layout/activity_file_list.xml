@@ -9,16 +9,32 @@
     android:background="@color/pink_background"
     tools:context=".FileListActivity">
 
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/topAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        app:titleTextColor="@color/pink_button"
+        app:menu="@menu/menu_file_list"
+        app:title="Files"
+        app:navigationIcon="@drawable/ic_back"
+        app:navigationIconTint="@color/pink_button"
+        app:titleTextAppearance="@style/TextAppearance.ToolbarTitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- RecyclerView для отображения списка файлов -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/fileRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scrollbars="vertical"
+        android:layout_marginTop="16dp"
         app:layout_constraintBottom_toTopOf="@+id/archiveButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/topAppBar" />
 
     <android.widget.Button
         android:id="@+id/archiveButton"
