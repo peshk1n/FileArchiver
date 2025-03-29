@@ -8,6 +8,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.io.File;
 import java.util.List;
 
 public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder> {
@@ -31,6 +33,21 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
         holder.fileName.setText(file.getName());
         holder.fileSize.setText(file.getSize());
         holder.fileIcon.setImageResource(file.getIconResId());
+
+        if (file.isArchived()) {
+            holder.fileStatus.setText("• Archived");
+            holder.fileStatus.setVisibility(View.VISIBLE);
+            holder.fileName.setAlpha(0.5f);
+            holder.fileIcon.setAlpha(0.5f);
+            holder.fileSize.setAlpha(0.5f);
+        }
+    }
+
+    public void setItemArchived(int position, boolean isArchived) {
+        if (position >= 0 && position < files.size()) {
+            files.get(position).setArchived(isArchived);
+            notifyItemChanged(position);
+        }
     }
 
     @Override
@@ -56,6 +73,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
     public static class FileViewHolder extends RecyclerView.ViewHolder {
         TextView fileName;
         TextView fileSize;
+        TextView fileStatus;
         ImageView fileIcon;
 
         public FileViewHolder(@NonNull View itemView) {
@@ -63,10 +81,15 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
             fileName = itemView.findViewById(R.id.fileName);
             fileSize = itemView.findViewById(R.id.fileSize);
             fileIcon = itemView.findViewById(R.id.fileIcon);
+            fileStatus = itemView.findViewById(R.id.fileStatus);
         }
     }
 
     public void setFileItems(List<FileItem> fileItems) {
         this.files = fileItems;
+    }
+
+    public List<FileItem> getFileItems(){
+        return this.files;
     }
 }

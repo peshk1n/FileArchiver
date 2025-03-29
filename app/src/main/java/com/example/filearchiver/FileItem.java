@@ -7,12 +7,22 @@ public class FileItem {
     private String name;
     private String size;
     private int iconResId;
+    private boolean isArchived;
 
     public FileItem(Uri uri, String name, String size, int iconResId) {
         this.uri = uri;
         this.name = name;
         this.size = size;
         this.iconResId = iconResId;
+        this.isArchived = false;
+    }
+
+    public boolean isArchived(){
+        return this.isArchived;
+    }
+
+    public void setArchived(boolean isArchived){
+        this.isArchived = isArchived;
     }
 
     public Uri getUri(){
@@ -25,6 +35,10 @@ public class FileItem {
 
     public String getSize() {
         return size;
+    }
+
+    public void setSize(String size){
+        this.size = size;
     }
 
     public int getIconResId() {

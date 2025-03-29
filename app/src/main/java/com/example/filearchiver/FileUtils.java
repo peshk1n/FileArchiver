@@ -86,7 +86,7 @@ public class FileUtils {
     }
 
     // Метод для форматирования размера файла
-    private static String formatFileSize(long sizeInBytes) {
+    public static String formatFileSize(long sizeInBytes) {
         if (sizeInBytes <= 0) {
             return "0 B";
         }

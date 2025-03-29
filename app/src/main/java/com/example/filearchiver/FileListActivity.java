@@ -1,6 +1,5 @@
 package com.example.filearchiver;
 
-import android.app.ActivityOptions;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
@@ -143,14 +142,13 @@ public class FileListActivity extends AppCompatActivity {
             btnArchive.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
             progressText.setVisibility(View.VISIBLE);
+            invalidateOptionsMenu();
         }
         else {
-            progressBar.setVisibility(View.GONE);
-            progressText.setVisibility(View.GONE);
-            btnArchive.setVisibility(View.VISIBLE);
+            progressText.setText("Completed");
+            findViewById(R.id.ivCheckmark).setVisibility(View.VISIBLE);
             fileUris.clear();
         }
-        invalidateOptionsMenu();
     }
 
 
@@ -164,7 +162,7 @@ public class FileListActivity extends AppCompatActivity {
             if (filesArchived == totalFiles) {
                 progressBar.postDelayed(() -> {
                     setArchiving(false);
-                }, 1000);
+                }, 500);
             }
         });
     }
@@ -209,13 +207,24 @@ public class FileListActivity extends AppCompatActivity {
                 }
             }
 
-            String tempOutputFilePath = new File(getCacheDir(), fileName + ".zip").getAbsolutePath();
+            String archiveName = fileName + ".zip";
+            File outputFile = new File(getCacheDir(), archiveName);
+            String tempOutputFilePath = outputFile.getAbsolutePath();
+
             boolean success = compressFile(inputFilePath, tempOutputFilePath);
 
             uiHandler.post(() -> {
                 int position = fileAdapter.findItemPosition(fileUri);
                 if (position != -1) {
-                    fileAdapter.removeItem(position);
+                    String oldFileSize = fileAdapter.getFileItems().get(position).getSize();
+                    FileItem archiveFileItem = new FileItem(
+                            fileUri,
+                            archiveName,
+                            oldFileSize + " → " + FileUtils.formatFileSize(outputFile.length()),
+                            R.drawable.ic_archive);
+
+                    fileAdapter.getFileItems().set(position, archiveFileItem);
+                    fileAdapter.setItemArchived(position, true);
                 }
             });
 
