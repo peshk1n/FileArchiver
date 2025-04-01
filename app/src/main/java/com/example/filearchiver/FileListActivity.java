@@ -162,7 +162,7 @@ public class FileListActivity extends AppCompatActivity {
             if (filesArchived == totalFiles) {
                 progressBar.postDelayed(() -> {
                     setArchiving(false);
-                }, 500);
+                }, 1000);
             }
         });
     }
