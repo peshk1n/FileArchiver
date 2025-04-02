@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,6 +32,19 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
+import android.content.pm.ActivityInfo;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class FileListActivity extends AppCompatActivity {
 
@@ -82,7 +96,15 @@ public class FileListActivity extends AppCompatActivity {
                         setArchiving(true);
                         // Архивируем файлы
                         for (Uri fileUri : fileUris) {
-                            compressSelectedFile(fileUri, folderUri);
+                            boolean isZip=false;
+                            String fileName = FileUtils.getFileName(FileListActivity.this, fileUri);
+                            isZip = fileName.toLowerCase().endsWith(".zip");
+                            if(!isZip)
+                                compressSelectedFile(fileUri, folderUri);
+                            else{
+                                String inputFilePath = FileUtils.getPath(FileListActivity.this, fileUri);
+                                copyFileToFolder(inputFilePath,folderUri, fileName);}
+
                         }
                     }
                 }
@@ -91,8 +113,10 @@ public class FileListActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_file_list);
+
 
         fileUris = getIntent().getParcelableArrayListExtra("selectedFiles");
         totalFiles = fileUris != null ? fileUris.size() : 0;
@@ -119,6 +143,7 @@ public class FileListActivity extends AppCompatActivity {
                 Toast.makeText(this, "Файлы не выбраны", Toast.LENGTH_SHORT).show();
             }
         });
+
     }
 
 
@@ -133,6 +158,7 @@ public class FileListActivity extends AppCompatActivity {
 
     // Метод для включения/выключения режима загрузки
     private void setArchiving(boolean archiving) {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         isArchiving = archiving;
         if(archiving){
             filesArchived = 0;
@@ -159,9 +185,11 @@ public class FileListActivity extends AppCompatActivity {
             int progress = (int) ((filesArchived * 100.0) / totalFiles);
             progressBar.setProgressCompat(progress, true);
             progressText.setText("File " + filesArchived + "/" + totalFiles);
+            showProgressNotification(progress);
             if (filesArchived == totalFiles) {
                 progressBar.postDelayed(() -> {
                     setArchiving(false);
+                    showCompletionNotification();
                 }, 1000);
             }
         });
@@ -189,6 +217,7 @@ public class FileListActivity extends AppCompatActivity {
     );
 
 
+
     private void compressSelectedFile(Uri fileUri, Uri folderUri) {
         new Thread(() -> {
             String inputFilePath = FileUtils.getPath(FileListActivity.this, fileUri);
@@ -198,6 +227,7 @@ public class FileListActivity extends AppCompatActivity {
             }
 
             String fileName = FileUtils.getFileName(FileListActivity.this, fileUri);
+
             if (fileName == null) {
                 fileName = "archive";
             } else {
@@ -241,6 +271,53 @@ public class FileListActivity extends AppCompatActivity {
 
         }).start();
     }
+
+
+    private void copyFileToFolder(String inputFilePath, Uri folderUri, String fileName) {
+        new Thread(() -> {
+            File inputFile = new File(inputFilePath);
+            if (!inputFile.exists()) {
+                uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Файл не найден", Toast.LENGTH_SHORT).show());
+                return;
+            }
+
+            DocumentFile folder = DocumentFile.fromTreeUri(FileListActivity.this, folderUri);
+            if (folder != null && folder.isDirectory()) {
+                DocumentFile copiedFile = folder.createFile("application/zip", fileName);
+                if (copiedFile != null) {
+                    try (InputStream inputStream = new FileInputStream(inputFile);
+                         OutputStream outputStream = getContentResolver().openOutputStream(copiedFile.getUri())) {
+
+                        if (outputStream != null) {
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            long totalBytesCopied = 0;
+                            long totalFileSize = inputFile.length();
+
+                            while ((length = inputStream.read(buffer)) > 0) {
+                                outputStream.write(buffer, 0, length);
+                                totalBytesCopied += length;
+
+
+
+
+                            }
+
+                            uiHandler.post(() -> {
+                                updateFileProgress();  // Обновляем прогресс архивирования
+                            });
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Ошибка при копировании файла", Toast.LENGTH_SHORT).show());
+                    }
+                }
+            }
+        }).start();
+    }
+
+
+
 
 
     // Метод для перемещения архива в выбранную папку
@@ -317,4 +394,34 @@ public class FileListActivity extends AppCompatActivity {
             totalFiles++;
         }
     }
+
+
+    private static final int NOTIFICATION_ID = 1;
+    private static final String CHANNEL_ID = "archive_progress";
+
+
+
+    private void showProgressNotification(int progress) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_archive)
+                .setContentTitle("Архивация файлов")
+                .setContentText("Прогресс: " + progress + "%")
+                .setProgress(100, progress, false)
+                .setOngoing(true);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
+    }
+
+    private void showCompletionNotification() {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_archive)
+                .setContentTitle("Архивация завершена")
+                .setContentText("Все файлы успешно заархивированы!")
+                .setAutoCancel(true);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
+    }
+
 }
