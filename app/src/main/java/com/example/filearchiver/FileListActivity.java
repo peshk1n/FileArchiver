@@ -102,8 +102,7 @@ public class FileListActivity extends AppCompatActivity {
                             if(!isZip)
                                 compressSelectedFile(fileUri, folderUri);
                             else{
-                                String inputFilePath = FileUtils.getPath(FileListActivity.this, fileUri);
-                                copyFileToFolder(inputFilePath,folderUri, fileName);}
+                                copyFileToFolder(fileUri,folderUri, fileName);}
 
                         }
                     }
@@ -273,8 +272,9 @@ public class FileListActivity extends AppCompatActivity {
     }
 
 
-    private void copyFileToFolder(String inputFilePath, Uri folderUri, String fileName) {
+    private void copyFileToFolder(Uri fileUri, Uri folderUri, String fileName) {
         new Thread(() -> {
+            String inputFilePath = FileUtils.getPath(FileListActivity.this, fileUri);
             File inputFile = new File(inputFilePath);
             if (!inputFile.exists()) {
                 uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Файл не найден", Toast.LENGTH_SHORT).show());
@@ -297,26 +297,37 @@ public class FileListActivity extends AppCompatActivity {
                             while ((length = inputStream.read(buffer)) > 0) {
                                 outputStream.write(buffer, 0, length);
                                 totalBytesCopied += length;
-
-
-
-
                             }
 
                             uiHandler.post(() -> {
                                 updateFileProgress();  // Обновляем прогресс архивирования
+                                int position = fileAdapter.findItemPosition(fileUri);
+                                if (position != -1) {
+                                    String oldFileSize = fileAdapter.getFileItems().get(position).getSize();
+                                    FileItem archiveFileItem = new FileItem(
+                                            fileUri,
+                                            fileName,
+                                            oldFileSize,
+                                            R.drawable.ic_archive);
+
+                                    fileAdapter.getFileItems().set(position, archiveFileItem);
+                                    fileAdapter.setItemArchived(position, true);
+                                }
                             });
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
                         uiHandler.post(() -> Toast.makeText(FileListActivity.this, "Ошибка при копировании файла", Toast.LENGTH_SHORT).show());
                     }
+
+                    File file = new File(inputFilePath);
+                    if (file.exists()) {
+                        file.delete();
+                    }
                 }
             }
         }).start();
     }
-
-
 
 
 
