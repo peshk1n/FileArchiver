@@ -6,9 +6,9 @@
 обеспечивая максимальную производительность архивации.
 
 <div style="display: flex; justify-content: space-between;">
-  <img src="https://github.com/user-attachments/assets/46d0f8b6-219d-4701-bf5e-0cbf3350ebe6" width="25%">
-  <img src="https://github.com/user-attachments/assets/fac16eee-9ce7-4113-b259-e635cf2c0bac" width="25%">
-  <img src="https://github.com/user-attachments/assets/541b3ff5-c811-43d9-b872-f208e9a56a6a" width="25%">
+  <img src="https://github.com/user-attachments/assets/00cad4fd-2e30-405f-b17a-da0edacc74a5" width="30%">
+  <img src="https://github.com/user-attachments/assets/fac16eee-9ce7-4113-b259-e635cf2c0bac" width="30%">
+  <img src="https://github.com/user-attachments/assets/541b3ff5-c811-43d9-b872-f208e9a56a6a" width="30%">
 </div>
 
 ---
